@@ -164,8 +164,8 @@ def analyze_conversation_momentum(messages, index, window_size=None):
     
     response_times = []
     for i in range(1, len(window)):
-        current_time = datetime.strptime(window[i]['date'], '%Y-%m-%d %H:%M:%S')
-        prev_time = datetime.strptime(window[i-1]['date'], '%Y-%m-%d %H:%M:%S')
+        current_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i]['date']), '%b %d, %Y %I:%M:%S %p')
+        prev_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i-1]['date']).strip(), '%b %d, %Y %I:%M:%S %p')
         response_times.append((current_time - prev_time).total_seconds() / 60)
     
     avg_response_time = sum(response_times) / len(response_times) if response_times else 60
@@ -229,8 +229,8 @@ def analyze_context_window(messages, index, window_size=None):
     
     response_gaps = []
     for i in range(1, len(window)):
-        current_time = datetime.strptime(window[i]['date'], '%Y-%m-%d %H:%M:%S')
-        prev_time = datetime.strptime(window[i-1]['date'], '%Y-%m-%d %H:%M:%S')
+        current_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i]['date']), '%b %d, %Y %I:%M:%S %p')
+        prev_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i-1]['date']).strip(), '%b %d, %Y %I:%M:%S %p')
         gap_minutes = (current_time - prev_time).total_seconds() / 60
         response_gaps.append(gap_minutes)
     
@@ -299,7 +299,7 @@ def assign_conversation_ids(messages, base_gap_hours=6):
     
     # Sort messages by date to ensure chronological order
     print(f"Sorting {len(messages):,} messages chronologically...")
-    messages.sort(key=lambda msg: datetime.strptime(msg['date'], '%Y-%m-%d %H:%M:%S'))
+    messages.sort(key=lambda msg: datetime.strptime((msg['date'].split('>')[1].split('<')[0] if '<' in msg['date'] else msg['date']), '%b %d, %Y %I:%M:%S %p'))
     
     conversation_id = 1
     messages[0]['conversation_id'] = conversation_id
@@ -313,8 +313,8 @@ def assign_conversation_ids(messages, base_gap_hours=6):
     print("Grouping conversations...")
     
     for i in range(1, len(messages)):
-        current_time = datetime.strptime(messages[i]['date'], '%Y-%m-%d %H:%M:%S')
-        previous_time = datetime.strptime(messages[i-1]['date'], '%Y-%m-%d %H:%M:%S')
+        current_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i]['date']), '%b %d, %Y %I:%M:%S %p')
+        previous_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i-1]['date']).strip(), '%b %d, %Y %I:%M:%S %p')
         current_msg = messages[i]['message']
         previous_msg = messages[i-1]['message']
         current_sender = messages[i]['sender']
@@ -591,8 +591,8 @@ def analyze_conversations(messages):
         lengths.append(len(conv))
         
         if len(conv) > 1:
-            start_time = datetime.strptime(conv[0]['date'], '%Y-%m-%d %H:%M:%S')
-            end_time = datetime.strptime(conv[-1]['date'], '%Y-%m-%d %H:%M:%S')
+            start_time = datetime.strptime(re.sub('<[^>]+>', '', messages[0]['date']), '%b %d, %Y %I:%M:%S %p')
+            end_time = datetime.strptime(re.sub('<[^>]+>', '', messages[-1]['date']).strip(), '%b %d, %Y %I:%M:%S %p')
             duration_hours = (end_time - start_time).total_seconds() / 3600
             durations.append(duration_hours)
             
@@ -630,21 +630,6 @@ def analyze_conversations(messages):
     
     print_section("Notable Conversations")
     sorted_convs = sorted(conversations.items(), key=lambda x: len(x[1]), reverse=True)
-    
-    print("Longest Conversations:")
-    for conv_id, conv in sorted_convs[:3]:
-        start_date = conv[0]['date']
-        end_date = conv[-1]['date']
-        duration = (datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S') - 
-                   datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')).total_seconds() / 3600
-        print(f"  #{conv_id}: {len(conv):,} messages, {duration:.1f}h ({start_date[:10]})")
-    
-    print("\nRecent Conversations:")
-    recent_convs = sorted(conversations.items(), key=lambda x: x[1][-1]['date'], reverse=True)
-    for conv_id, conv in recent_convs[:5]:
-        start_date = conv[0]['date']
-        end_date = conv[-1]['date']
-        print(f"  #{conv_id}: {len(conv):,} messages ({start_date[:10]} → {end_date[:10]})")
 
 def load_messages(csv_file):
     """Load messages from CSV file and ensure chronological order"""
@@ -701,7 +686,7 @@ def analyze_conversation_quality(messages, sample_size=None):
     if not sample_messages:
         return
     
-    sample_messages.sort(key=lambda msg: datetime.strptime(msg['date'], '%Y-%m-%d %H:%M:%S'))
+    sample_messages.sort(key=lambda msg: datetime.strptime((msg['date'].split('>')[1].split('<')[0] if '<' in msg['date'] else msg['date']), '%b %d, %Y %I:%M:%S %p'))
     
     conversation_id = 1
     sample_messages[0]['conversation_id'] = conversation_id
@@ -711,8 +696,8 @@ def analyze_conversation_quality(messages, sample_size=None):
     confidence_scores = []
     
     for i in range(1, len(sample_messages)):
-        current_time = datetime.strptime(sample_messages[i]['date'], '%Y-%m-%d %H:%M:%S')
-        previous_time = datetime.strptime(sample_messages[i-1]['date'], '%Y-%m-%d %H:%M:%S')
+        current_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i]['date']), '%b %d, %Y %I:%M:%S %p')
+        previous_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i-1]['date']).strip(), '%b %d, %Y %I:%M:%S %p')
         current_msg = sample_messages[i]['message']
         previous_msg = sample_messages[i-1]['message']
         
@@ -779,8 +764,8 @@ def analyze_conversation_quality(messages, sample_size=None):
         topic_similarities = []
         
         for i in range(1, len(conv_msgs)):
-            current_time = datetime.strptime(conv_msgs[i]['date'], '%Y-%m-%d %H:%M:%S')
-            prev_time = datetime.strptime(conv_msgs[i-1]['date'], '%Y-%m-%d %H:%M:%S')
+            current_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i]['date']), '%b %d, %Y %I:%M:%S %p')
+            prev_time = datetime.strptime(re.sub('<[^>]+>', '', messages[i-1]['date']).strip(), '%b %d, %Y %I:%M:%S %p')
             gap_minutes = (current_time - prev_time).total_seconds() / 60
             
             if gap_minutes < 5:
