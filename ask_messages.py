@@ -16,7 +16,7 @@ from prompts import (
     get_basic_analysis_prompt
 )
 
-MODEL = "deepseek-r1:14b"
+MODEL = "deepseek-r1:latest"
 MAX_CONTEXT_TOKENS = 128000
 
 def compress_message_format(messages):
@@ -448,7 +448,7 @@ def ask_ollama_single_conversation(conversation_messages, conv_id, question, mod
     
     try:
         response = requests.post(
-            "http://localhost:11434/api/generate",
+            "http://127.0.0.1:11434/api/generate",
             json={"model": model, "prompt": prompt, "stream": True, "keep_alive": -1},
             timeout=None, stream=True
         )
